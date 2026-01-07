@@ -1,0 +1,14 @@
+# Ignorar pasta do servidor (backend separado)
+server/
+
+# Ignorar arquivos de desenvolvimento
+.vscode/
+*.zip
+node_modules/
+
+# Arquivos de sistema
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log

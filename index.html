@@ -1,0 +1,417 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <title>Pixel War: Operations - Ultimate Edition</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+    <div id="game-wrapper">
+        <div id="game-container">
+            <canvas id="gameCanvas" width="900" height="650"></canvas>
+            
+            <div id="ui-layer">
+                <div class="hud-panel">
+                    <div class="hud-title" data-i18n="hud.status">Status</div>
+                    <div class="bar-container">
+                        <div class="bar-label">
+                            <span data-i18n="hud.hp">HP</span>
+                            <span id="hp-text">100/100</span>
+                        </div>
+                        <div class="bar-bg">
+                            <div id="hp-fill" class="bar-fill"></div>
+                        </div>
+                    </div>
+                    <div class="bar-container">
+                        <div class="bar-label">
+                            <span data-i18n="hud.ammo">MUNIÇÃO</span>
+                            <span id="ammo-text">50/50</span>
+                        </div>
+                        <div class="bar-bg">
+                            <div id="ammo-fill" class="bar-fill"></div>
+                        </div>
+                    </div>
+                    <div class="score-display">
+                        <div class="hud-title" data-i18n="hud.score">Score</div>
+                        <div class="score-value" id="score-display">0</div>
+                    </div>
+                </div>
+                
+                <div class="level-display" id="level-display">
+                    FASE 1
+                </div>
+                
+                <div class="sound-toggle" id="sound-toggle" onclick="toggleSound()">
+                    🔊
+                </div>
+                
+                <div class="lang-toggle" id="lang-toggle" onclick="I18n.toggleLanguage()" title="PT/EN">
+                    🌐 <span id="current-lang">PT</span>
+                </div>
+                
+                <div id="powerup-panel">
+                    <div style="display: flex; align-items: center;">
+                        <span class="powerup-icon" id="powerup-icon">⚡</span>
+                        <span class="powerup-name" id="powerup-name">VELOCIDADE</span>
+                    </div>
+                    <div class="powerup-timer">
+                        <div class="powerup-timer-fill" id="powerup-timer-fill"></div>
+                    </div>
+                </div>
+                
+                <div id="objective-panel">
+                    <div class="objective-title" data-i18n="hud.objective">Objetivo</div>
+                    <div class="objective-text" id="objective-text" data-i18n="hud.defaultObjective">Sobreviva e elimine os inimigos</div>
+                </div>
+            </div>
+
+            <div id="start-screen" class="overlay">
+                <!-- Language Selector for Menu -->
+                <div class="menu-lang-toggle" id="menu-lang-toggle" onclick="I18n.toggleLanguage()" title="PT/EN">
+                    🌐 <span id="menu-current-lang">PT</span>
+                </div>
+                
+                <div class="menu-container">
+                    <div class="game-title" data-i18n="menu.title">PIXEL WAR</div>
+                    <div class="game-subtitle" data-i18n="menu.subtitle">ULTIMATE EDITION</div>
+                    
+                    <!-- User Auth Status -->
+                    <div id="auth-status" class="auth-status">
+                        <div id="auth-logged-out">
+                            <button class="auth-btn" onclick="showLoginModal()" data-i18n="menu.login">🔑 Login</button>
+                            <button class="auth-btn secondary" onclick="showRegisterModal()" data-i18n="menu.register">📝 Criar Conta</button>
+                        </div>
+                        <div id="auth-logged-in" class="hidden">
+                            <span class="user-greeting">👋 <span data-i18n="menu.greeting">Olá</span>, <strong id="user-display-name"></strong>!</span>
+                            <button class="auth-btn small" onclick="AuthManager.logout()" data-i18n="menu.logout">Sair</button>
+                        </div>
+                    </div>
+                    
+                    <!-- Leaderboard Button -->
+                    <button class="leaderboard-btn" onclick="showLeaderboardModal()" data-i18n="menu.ranking">🏆 Ranking Global</button>
+                    
+                    <p class="menu-description">
+                        <span data-i18n="menu.description">Selecione sua unidade e complete as missões para vencer a guerra!</span><br>
+                        <span data-i18n="menu.bonusHint">💎 CAIXAS DE BÔNUS spawnam a cada 5-8 segundos!</span><br>
+                        <span data-i18n="menu.audioHint">🎵 Áudio ativado ao clicar em INICIAR!</span>
+                    </p>
+                    </p>
+                    
+                    <div class="class-select" id="class-select">
+                        <div class="class-card selected" data-class="soldier" onclick="selectClass('soldier', event)">
+                            <canvas class="class-icon" id="icon-soldier" width="70" height="70"></canvas>
+                            <div class="class-name" data-i18n="classes.soldier">SOLDADO</div>
+                            <div class="class-stats">
+                                <span data-i18n="classes.hp">HP</span>: <span>80</span> | <span data-i18n="classes.damage">DANO</span>: <span data-i18n="classes.medium">Médio</span><br>
+                                <span data-i18n="classes.speed">VEL</span>: <span data-i18n="classes.fast">Rápido</span> | <span data-i18n="classes.shot">TIRO</span>: <span data-i18n="classes.simple">Simples</span>
+                            </div>
+                        </div>
+                        <div class="class-card" data-class="tank" onclick="selectClass('tank', event)">
+                            <canvas class="class-icon" id="icon-tank" width="70" height="70"></canvas>
+                            <div class="class-name" data-i18n="classes.tank">TANQUE</div>
+                            <div class="class-stats">
+                                <span data-i18n="classes.hp">HP</span>: <span>200</span> | <span data-i18n="classes.damage">DANO</span>: <span data-i18n="classes.high">Alto</span><br>
+                                <span data-i18n="classes.speed">VEL</span>: <span data-i18n="classes.slow">Lento</span> | <span data-i18n="classes.shot">TIRO</span>: <span data-i18n="classes.slow">Lento</span>
+                            </div>
+                        </div>
+                        <div class="class-card" data-class="plane" onclick="selectClass('plane', event)">
+                            <canvas class="class-icon" id="icon-plane" width="70" height="70"></canvas>
+                            <div class="class-name" data-i18n="classes.plane">AVIÃO</div>
+                            <div class="class-stats">
+                                <span data-i18n="classes.hp">HP</span>: <span>60</span> | <span data-i18n="classes.damage">DANO</span>: <span data-i18n="classes.low">Baixo</span><br>
+                                <span data-i18n="classes.speed">VEL</span>: <span data-i18n="classes.veryFast">Muito Rápido</span> | <span data-i18n="classes.shot">TIRO</span>: <span data-i18n="classes.fast">Rápido</span>
+                            </div>
+                        </div>
+                        <div class="class-card" data-class="ship" onclick="selectClass('ship', event)">
+                            <canvas class="class-icon" id="icon-ship" width="70" height="70"></canvas>
+                            <div class="class-name" data-i18n="classes.ship">NAVIO</div>
+                            <div class="class-stats">
+                                <span data-i18n="classes.hp">HP</span>: <span>150</span> | <span data-i18n="classes.damage">DANO</span>: <span data-i18n="classes.medium">Médio</span><br>
+                                <span data-i18n="classes.speed">VEL</span>: <span data-i18n="classes.medium">Médio</span> | <span data-i18n="classes.shot">TIRO</span>: <span data-i18n="classes.triple">Triplo</span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Continue Button (hidden by default) -->
+                    <div id="continue-container" class="hidden">
+                        <button class="menu-button continue-btn" onclick="continueGame()" data-i18n="menu.continue">📂 CONTINUAR JOGO</button>
+                        <p class="continue-info" id="continue-info"></p>
+                    </div>
+                    
+                    <button class="menu-button" onclick="startGame()" data-i18n="menu.play">🚀 NOVA MISSÃO</button>
+                    
+                    <div id="dev-level-selector" class="dev-panel hidden">
+                        <div class="dev-title" data-i18n="menu.devMode">🔧 DEV MODE - Selecionar Fase</div>
+                        <div class="dev-level-buttons" id="dev-level-buttons">
+                            <!-- Botões gerados via JS -->
+                        </div>
+                    </div>
+                    
+                    <div class="controls-hint">
+                        <p><kbd>↑</kbd><kbd>↓</kbd><kbd>←</kbd><kbd>→</kbd> <span data-i18n="controls.move">Movimentar</span></p>
+                        <p><kbd>ESPAÇO</kbd> <span data-i18n="controls.shoot">Atirar</span></p>
+                    </div>
+                </div>
+            </div>
+
+            <div id="upgrade-screen" class="overlay hidden">
+                <div class="menu-container">
+                    <h2 data-i18n="upgrades.title">🎖️ MISSÃO CUMPRIDA!</h2>
+                    <p class="menu-description" data-i18n="upgrades.subtitle">Escolha um upgrade para continuar:</p>
+                    <div class="upgrade-options">
+                        <div class="upgrade-card" onclick="applyUpgrade('health')">
+                            <div class="upgrade-icon">❤️</div>
+                            <div class="upgrade-name" data-i18n="upgrades.health">REPARO COMPLETO</div>
+                            <div class="upgrade-desc" data-i18n="upgrades.healthDesc">Cura + Aumenta HP Máximo</div>
+                        </div>
+                        <div class="upgrade-card" onclick="applyUpgrade('damage')">
+                            <div class="upgrade-icon">💥</div>
+                            <div class="upgrade-name" data-i18n="upgrades.damage">PODER DE FOGO</div>
+                            <div class="upgrade-desc" data-i18n="upgrades.damageDesc">Aumenta dano de ataque</div>
+                        </div>
+                        <div class="upgrade-card" onclick="applyUpgrade('speed')">
+                            <div class="upgrade-icon">⚡</div>
+                            <div class="upgrade-name" data-i18n="upgrades.speed">VELOCIDADE</div>
+                            <div class="upgrade-desc" data-i18n="upgrades.speedDesc">Reduz tempo entre tiros</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Tela de seleção de unidade entre fases -->
+            <div id="class-change-screen" class="overlay hidden">
+                <div class="menu-container">
+                    <h2 data-i18n="classChange.title">🔄 PRÓXIMA MISSÃO</h2>
+                    <p class="menu-description" id="next-mission-info">Fase X - Escolha sua unidade:</p>
+                    
+                    <div class="class-select" id="class-select-change">
+                        <div class="class-card" data-class="soldier" onclick="selectClassForNextLevel('soldier', event)">
+                            <canvas class="class-icon" id="icon-soldier-change" width="70" height="70"></canvas>
+                            <div class="class-name" data-i18n="classes.soldier">SOLDADO</div>
+                            <div class="class-stats">
+                                <span data-i18n="classes.hp">HP</span>: <span>80</span> | <span data-i18n="classes.damage">DANO</span>: <span data-i18n="classes.medium">Médio</span><br>
+                                <span data-i18n="classes.speed">VEL</span>: <span data-i18n="classes.fast">Rápido</span>
+                            </div>
+                        </div>
+                        <div class="class-card" data-class="tank" onclick="selectClassForNextLevel('tank', event)">
+                            <canvas class="class-icon" id="icon-tank-change" width="70" height="70"></canvas>
+                            <div class="class-name" data-i18n="classes.tank">TANQUE</div>
+                            <div class="class-stats">
+                                <span data-i18n="classes.hp">HP</span>: <span>200</span> | <span data-i18n="classes.damage">DANO</span>: <span data-i18n="classes.high">Alto</span><br>
+                                <span data-i18n="classes.speed">VEL</span>: <span data-i18n="classes.slow">Lento</span>
+                            </div>
+                        </div>
+                        <div class="class-card" data-class="plane" onclick="selectClassForNextLevel('plane', event)">
+                            <canvas class="class-icon" id="icon-plane-change" width="70" height="70"></canvas>
+                            <div class="class-name" data-i18n="classes.plane">AVIÃO</div>
+                            <div class="class-stats">
+                                <span data-i18n="classes.hp">HP</span>: <span>60</span> | <span data-i18n="classes.damage">DANO</span>: <span data-i18n="classes.low">Baixo</span><br>
+                                <span data-i18n="classes.speed">VEL</span>: <span data-i18n="classes.veryFast">Muito Rápido</span>
+                            </div>
+                        </div>
+                        <div class="class-card" data-class="ship" onclick="selectClassForNextLevel('ship', event)">
+                            <canvas class="class-icon" id="icon-ship-change" width="70" height="70"></canvas>
+                            <div class="class-name" data-i18n="classes.ship">NAVIO</div>
+                            <div class="class-stats">
+                                <span data-i18n="classes.hp">HP</span>: <span>150</span> | <span data-i18n="classes.damage">DANO</span>: <span data-i18n="classes.medium">Médio</span><br>
+                                <span data-i18n="classes.speed">VEL</span>: <span data-i18n="classes.medium">Médio</span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <button class="menu-button" onclick="confirmClassAndStart()" data-i18n="classChange.confirm">✅ CONFIRMAR E INICIAR</button>
+                </div>
+            </div>
+
+            <div id="gameover-screen" class="overlay hidden">
+                <div class="menu-container">
+                    <h1 class="gameover-title" data-i18n="gameOver.title">💀 MISSÃO FALHOU</h1>
+                    <p class="final-score" id="final-score"><span data-i18n="gameOver.finalScore">SCORE FINAL</span>: <span id="final-score-value">0</span></p>
+                    <button class="menu-button" onclick="retryLevel()" data-i18n="gameOver.retry">🔄 TENTAR NOVAMENTE</button>
+                </div>
+            </div>
+
+            <div id="victory-screen" class="overlay hidden">
+                <div class="menu-container">
+                    <h1 class="victory-title" data-i18n="victory.title">🏆 GUERRA VENCIDA!</h1>
+                    <p class="final-score" id="victory-score"><span data-i18n="victory.finalScore">SCORE FINAL</span>: <span id="victory-score-value">0</span></p>
+                    <p class="menu-description" data-i18n="victory.description">Você completou todas as operações com excelência!</p>
+                    <button class="menu-button secondary" onclick="location.reload()" data-i18n="victory.playAgain">🎮 JOGAR DE NOVO</button>
+                </div>
+            </div>
+
+            <!-- Tela de Pausa -->
+            <div id="pause-screen" class="overlay hidden">
+                <div class="menu-container pause-menu">
+                    <h1 class="pause-title" data-i18n="pause.title">⏸️ PAUSADO</h1>
+                    <p class="pause-hint" data-i18n="pause.hint">Pressione ESC para continuar</p>
+                    
+                    <div class="pause-stats">
+                        <div class="stat-item">
+                            <span class="stat-label" data-i18n="pause.currentScore">Score Atual:</span>
+                            <span class="stat-value" id="pause-score">0</span>
+                        </div>
+                        <div class="stat-item">
+                            <span class="stat-label" data-i18n="pause.phase">Fase:</span>
+                            <span class="stat-value" id="pause-level">1</span>
+                        </div>
+                        <div class="stat-item">
+                            <span class="stat-label" data-i18n="pause.record">Recorde:</span>
+                            <span class="stat-value" id="pause-highscore">0</span>
+                        </div>
+                    </div>
+                    
+                    <div class="pause-options">
+                        <div class="option-row">
+                            <span>🔊 <span data-i18n="hud.volume">Volume</span></span>
+                            <input type="range" id="volume-slider" min="0" max="100" value="50" 
+                                   onchange="updateVolume(this.value)">
+                        </div>
+                        <div class="option-row">
+                            <span>📍 <span data-i18n="hud.offscreenIndicators">Indicadores Off-screen</span></span>
+                            <label class="toggle-switch">
+                                <input type="checkbox" id="offscreen-toggle" checked 
+                                       onchange="CONFIG.showOffscreenIndicators = this.checked">
+                                <span class="toggle-slider"></span>
+                            </label>
+                        </div>
+                    </div>
+                    
+                    <div class="pause-buttons">
+                        <button class="menu-button" onclick="resumeGame()" data-i18n="pause.continue">▶️ CONTINUAR</button>
+                        <button class="menu-button save-btn" onclick="saveProgressAndNotify()" data-i18n="pause.save">💾 SALVAR PROGRESSO</button>
+                        <button class="menu-button secondary" onclick="saveAndQuit()" data-i18n="pause.saveAndQuit">🚪 SALVAR E SAIR</button>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Modal de Login -->
+            <div id="login-modal" class="modal-overlay hidden">
+                <div class="modal-container">
+                    <button class="modal-close" onclick="hideLoginModal()">×</button>
+                    <h2 class="modal-title" data-i18n="auth.loginTitle">🔑 Login</h2>
+                    <form id="login-form" onsubmit="handleLogin(event)">
+                        <div class="form-group">
+                            <label data-i18n="auth.username">Username ou Email</label>
+                            <input type="text" id="login-username" required data-i18n-placeholder="auth.usernameOnly">
+                        </div>
+                        <div class="form-group">
+                            <label data-i18n="auth.password">Senha</label>
+                            <input type="password" id="login-password" required placeholder="••••••">
+                        </div>
+                        <div id="login-error" class="form-error hidden"></div>
+                        <button type="submit" class="menu-button" data-i18n="auth.enter">Entrar</button>
+                    </form>
+                    <p class="modal-footer"><span data-i18n="auth.noAccount">Não tem conta?</span> <a href="#" onclick="showRegisterModal(); return false;" data-i18n="auth.createLink">Criar conta</a></p>
+                </div>
+            </div>
+            
+            <!-- Modal de Registro -->
+            <div id="register-modal" class="modal-overlay hidden">
+                <div class="modal-container">
+                    <button class="modal-close" onclick="hideRegisterModal()">×</button>
+                    <h2 class="modal-title" data-i18n="auth.registerTitle">📝 Criar Conta</h2>
+                    <form id="register-form" onsubmit="handleRegister(event)">
+                        <div class="form-group">
+                            <label data-i18n="auth.usernameOnly">Username</label>
+                            <input type="text" id="register-username" required minlength="3" maxlength="32" data-i18n-placeholder="auth.usernameOnly">
+                        </div>
+                        <div class="form-group">
+                            <label data-i18n="auth.email">Email</label>
+                            <input type="email" id="register-email" required placeholder="email@example.com">
+                        </div>
+                        <div class="form-group">
+                            <label data-i18n="auth.password">Senha</label>
+                            <input type="password" id="register-password" required minlength="6" data-i18n-placeholder="auth.minChars">
+                        </div>
+                        <div class="form-group">
+                            <label data-i18n="auth.displayName">Nome de Exibição (opcional)</label>
+                            <input type="text" id="register-displayname" maxlength="64" data-i18n-placeholder="auth.displayNameHint">
+                        </div>
+                        <div id="register-error" class="form-error hidden"></div>
+                        <button type="submit" class="menu-button" data-i18n="auth.createAccount">Criar Conta</button>
+                    </form>
+                    <p class="modal-footer"><span data-i18n="auth.hasAccount">Já tem conta?</span> <a href="#" onclick="showLoginModal(); return false;" data-i18n="auth.loginLink">Fazer login</a></p>
+                </div>
+            </div>
+            
+            <!-- Modal de Leaderboard -->
+            <div id="leaderboard-modal" class="modal-overlay hidden">
+                <div class="modal-container leaderboard-modal">
+                    <button class="modal-close" onclick="hideLeaderboardModal()">×</button>
+                    <h2 class="modal-title" data-i18n="leaderboard.title">🏆 Ranking Global</h2>
+                    
+                    <div class="leaderboard-tabs">
+                        <button class="tab-btn active" onclick="loadLeaderboard('all', this)" data-i18n="leaderboard.all">Geral</button>
+                        <button class="tab-btn" onclick="loadLeaderboard('weekly', this)" data-i18n="leaderboard.weekly">Semanal</button>
+                        <button class="tab-btn" onclick="loadLeaderboard('daily', this)" data-i18n="leaderboard.daily">Hoje</button>
+                        <button class="tab-btn" onclick="loadLeaderboard('soldier', this)">🎖️</button>
+                        <button class="tab-btn" onclick="loadLeaderboard('tank', this)">🛡️</button>
+                        <button class="tab-btn" onclick="loadLeaderboard('plane', this)">✈️</button>
+                        <button class="tab-btn" onclick="loadLeaderboard('ship', this)">⚓</button>
+                    </div>
+                    
+                    <div id="leaderboard-content" class="leaderboard-content">
+                        <div class="leaderboard-loading" data-i18n="leaderboard.loading">Carregando...</div>
+                    </div>
+                    
+                    <div id="my-rank" class="my-rank hidden">
+                        <span><span data-i18n="leaderboard.yourPosition">Sua posição:</span> <strong id="my-rank-position">#--</strong></span>
+                        <span><span data-i18n="leaderboard.bestScore">Melhor score:</span> <strong id="my-best-score">--</strong></span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+<!-- ============ REMOTE CONTENT LOADING ============ -->
+<!-- i18n deve ser carregado primeiro para traduções -->
+<script src="js/systems/i18n.js"></script>
+<!-- DataLoader deve ser carregado primeiro para disponibilizar dados do servidor -->
+<script src="js/systems/data-loader.js"></script>
+<script src="js/systems/auth.js"></script>
+<script src="js/systems/auth-ui.js"></script>
+
+<!-- Módulos carregados em ordem de dependência -->
+<script src="js/config.js"></script>
+<script src="js/audio.js"></script>
+<script src="js/particles.js"></script>
+
+<!-- Sistema de Sprites Modularizado -->
+<script src="js/sprites/core.js"></script>
+<script src="js/sprites/soldier.js"></script>
+<script src="js/sprites/vehicles.js"></script>
+<script src="js/sprites/aircraft.js"></script>
+<script src="js/sprites/naval.js"></script>
+<script src="js/sprites/objects.js"></script>
+<script src="js/sprites/enemies.js"></script>
+
+<!-- Sprites complementar -->
+<script src="js/sprites.js"></script>
+<script src="js/entities.js"></script>
+
+<!-- Sistemas -->
+<script src="js/systems/input.js"></script>
+<script src="js/systems/pause.js"></script>
+<script src="js/systems/powerups.js"></script>
+<script src="js/systems/helpers.js"></script>
+<script src="js/systems/ui-controls.js"></script>
+<script src="js/systems/server-helpers.js"></script>
+
+<!-- Fases -->
+<script src="js/phases/phase3-train.js"></script>
+<script src="js/phases/phase3-backgrounds.js"></script>
+<script src="js/phases/phase7-winter.js"></script>
+<script src="js/phases/phase9-shmup.js"></script>
+<script src="js/phases/phase10-escape.js"></script>
+<script src="js/phases/phase11-escaperoute.js"></script>
+<script src="js/phases/phase12-sniper.js"></script>
+
+<!-- Game Helpers (funções restantes) -->
+<script src="js/game-helpers.js"></script>
+
+<!-- Game Principal -->
+<script src="js/game.js"></script>
+</body>
+</html>
