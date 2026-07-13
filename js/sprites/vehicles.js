@@ -5,15 +5,15 @@
 const TANK_PALETTES = {
     ally: {
         0: null, 1: '#0a0a0a',
-        2: '#4a6a35', 3: '#2a4a1c', 4: '#6a8a55',
-        5: '#3a3a3a', 6: '#2a2a2a', 7: '#5a5a5a',
-        8: '#2a2a20', 9: '#1a1a15', 10: '#3a3a30'
+        2: '#5c7a40', 3: '#374f24', 4: '#82a060',
+        5: '#4e5a48', 6: '#333d2f', 7: '#6f7f66',
+        8: '#3c3c34', 9: '#232320', 10: '#5e5e52'
     },
     enemy: {
         0: null, 1: '#0a0a0a',
-        2: '#6a3535', 3: '#4a1c1c', 4: '#8a5555',
-        5: '#3a3a3a', 6: '#2a2a2a', 7: '#5a5a5a',
-        8: '#2a2020', 9: '#1a1515', 10: '#3a3030'
+        2: '#8e3a34', 3: '#5c1e1a', 4: '#b45c48',
+        5: '#4c4c56', 6: '#2f2f38', 7: '#727280',
+        8: '#3a3a42', 9: '#222228', 10: '#5e5e6a'
     },
     flash: {
         0: null, 1: '#fff', 2: '#fff', 3: '#fff', 4: '#fff',
@@ -117,18 +117,19 @@ const TANK_BODY_TEMPLATES = {
     ]
 };
 
-// Torre do tanque (10x10 pixels)
+// Torre do tanque (10x10) — cores do casco, luz vindo do canto superior esquerdo,
+// escotilha de metal no centro
 const TANK_TURRET = {
     base: [
         [0,0,0,1,1,1,1,0,0,0],
-        [0,0,1,7,7,7,7,1,0,0],
-        [0,1,7,5,5,5,5,7,1,0],
-        [1,7,5,5,5,5,5,5,7,1],
-        [1,7,5,5,6,6,5,5,7,1],
-        [1,7,5,5,6,6,5,5,7,1],
-        [1,7,5,5,5,5,5,5,7,1],
-        [0,1,7,5,5,5,5,7,1,0],
-        [0,0,1,7,7,7,7,1,0,0],
+        [0,0,1,4,4,2,2,1,0,0],
+        [0,1,4,4,2,2,2,2,1,0],
+        [1,4,4,2,2,2,2,2,3,1],
+        [1,4,2,2,7,5,2,2,3,1],
+        [1,2,2,2,5,6,2,3,3,1],
+        [1,2,2,2,2,2,2,3,3,1],
+        [0,1,2,2,2,3,3,3,1,0],
+        [0,0,1,2,3,3,3,1,0,0],
         [0,0,0,1,1,1,1,0,0,0],
     ]
 };
@@ -287,6 +288,9 @@ const JEEP_PALETTES = {
     }
 };
 
+// Variante estática com luz de freio acesa (paleta fixa = cache de sprite reaproveitado)
+JEEP_PALETTES.allyBraking = { ...JEEP_PALETTES.ally, 11: '#ff0000', 12: '#ff4444' };
+
 // Template do jipe - Visão traseira aprimorada
 // Dimensões dinâmicas - NÃO usar 24x32 hardcoded!
 const JEEP_TEMPLATE_REAR = {
@@ -364,13 +368,8 @@ function getJeepWheelFrame(speed) {
 
 function drawJeepSprite(ctx, x, y, scale, speed, braking, flash) {
     const template = getJeepWheelFrame(speed);
-    const palette = flash ? { ...JEEP_PALETTES.flash } : { ...JEEP_PALETTES.ally };
-    
-    // When braking, light up brake lights (index 11 becomes bright red)
-    if (braking && !flash) {
-        palette[11] = '#ff0000';  // All brake light areas turn bright red
-        palette[12] = '#ff4444';  // Center highlight even brighter
-    }
+    const palette = flash ? JEEP_PALETTES.flash :
+                    (braking ? JEEP_PALETTES.allyBraking : JEEP_PALETTES.ally);
     
     const s = scale || 3;
     // Dynamic width/height from template - NO hardcoded 24x32!
@@ -527,7 +526,7 @@ function getTruckWheelFrame() {
 
 function drawTruckSprite(ctx, x, y, scale, flash) {
     const template = getTruckWheelFrame();
-    const palette = flash ? { ...TRUCK_PALETTES.flash } : { ...TRUCK_PALETTES.enemy };
+    const palette = flash ? TRUCK_PALETTES.flash : TRUCK_PALETTES.enemy;
     const s = scale || 2;
     
     // Dimensões dinâmicas do template

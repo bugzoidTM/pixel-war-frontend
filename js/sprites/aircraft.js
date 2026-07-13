@@ -5,14 +5,14 @@
 const PLANE_PALETTES = {
     ally: {
         0: null, 1: '#0a0a0a',
-        2: '#4a6a35', 3: '#2a4a1c', 4: '#6a8a55',
-        5: '#5a5a5a', 6: '#3a3a3a', 7: '#7a7a7a',
+        2: '#5c7a40', 3: '#374f24', 4: '#82a060',
+        5: '#3a6a9a', 6: '#3a3a3a', 7: '#7a7a7a',
         8: '#aa6020', 9: '#8a4010', 10: '#ca8040'
     },
     enemy: {
         0: null, 1: '#0a0a0a',
-        2: '#6a6a7a', 3: '#4a4a5a', 4: '#8a8a9a',
-        5: '#4a4a4a', 6: '#2a2a2a', 7: '#6a6a6a',
+        2: '#70707e', 3: '#494956', 4: '#9e9eae',
+        5: '#c03030', 6: '#2a2a2a', 7: '#6a6a6a',
         8: '#aa2020', 9: '#8a1010', 10: '#ca4040'
     },
     flash: {
@@ -116,15 +116,15 @@ function drawEnemyPlane(ctx, x, y, w, h, direction, flash = false) {
 const CHOPPER_PALETTES = {
     ally: {
         0: null, 1: '#0a0a0a',
-        2: '#4a6a35', 3: '#2a4a1c', 4: '#6a8a55',
-        5: '#5a5a5a', 6: '#3a3a3a', 7: '#7a7a7a',
-        8: '#1a3a5a', 9: '#0a2a4a'
+        2: '#5c7a40', 3: '#374f24', 4: '#82a060',
+        5: '#4e5a48', 6: '#2f3a2c', 7: '#78886c',
+        8: '#7ac6e8', 9: '#3a7a9c'
     },
     enemy: {
         0: null, 1: '#0a0a0a',
-        2: '#5a4a3a', 3: '#3a2a1a', 4: '#7a6a5a',
-        5: '#4a4a4a', 6: '#2a2a2a', 7: '#6a6a6a',
-        8: '#5a2a2a', 9: '#4a1a1a'
+        2: '#7e3830', 3: '#521f1a', 4: '#a4564a',
+        5: '#4c4c56', 6: '#2e2e36', 7: '#767684',
+        8: '#7ac6e8', 9: '#3a7a9c'
     },
     flash: {
         0: null, 1: '#fff', 2: '#fff', 3: '#fff', 4: '#fff',
@@ -136,22 +136,24 @@ const CHOPPER_PALETTES = {
     }
 };
 
-// Template do corpo do helicóptero (20x14 pixels)
+// Template do corpo do helicóptero (24x14) — nariz à ESQUERDA:
+// cockpit de vidro (8/9), turbina no dorso, boom de cauda com deriva,
+// pod de metralhadora sob o nariz e esquis de pouso
 const CHOPPER_BODY_TEMPLATE = [
-    [0,0,0,0,0,0,0,1,1,1,1,1,1,0,0,0,0,0,0,0],
-    [0,0,0,0,0,0,1,8,8,8,8,8,8,1,0,0,0,0,0,0],
-    [0,0,0,0,0,1,8,9,9,9,9,9,9,8,1,0,0,0,0,0],
-    [0,0,0,0,1,4,4,4,4,4,4,4,4,4,4,1,0,0,0,0],
-    [0,0,0,1,4,2,2,2,2,2,2,2,2,2,2,4,1,0,0,0],
-    [0,0,1,4,2,2,2,2,2,2,2,2,2,2,2,2,4,1,0,0],
-    [0,1,4,2,2,2,2,5,5,5,5,2,2,2,2,2,2,4,1,0],
-    [0,1,3,2,2,2,5,6,6,6,6,5,2,2,2,2,2,3,1,0],
-    [1,3,2,2,2,2,5,6,6,6,6,5,2,2,2,2,2,2,3,1],
-    [1,3,2,2,2,2,2,5,5,5,5,2,2,2,2,2,2,2,3,1],
-    [0,1,3,3,2,2,2,2,2,2,2,2,2,2,2,2,3,3,1,0],
-    [0,0,1,1,3,3,3,3,3,3,3,3,3,3,3,3,1,1,0,0],
-    [0,0,0,0,1,1,1,1,1,1,1,1,1,1,1,1,0,0,0,0],
-    [0,0,0,0,0,1,5,5,1,1,5,5,1,0,0,0,0,0,0,0],
+    [0,0,0,0,0,0,0,0,1,1,1,1,0,0,0,0,0,0,0,0,0,0,0,0],
+    [0,0,0,0,0,0,0,0,1,5,5,1,0,0,0,0,0,0,0,0,0,0,0,0],
+    [0,0,0,0,0,1,1,1,1,1,1,1,1,1,1,0,0,0,0,0,1,1,0,0],
+    [0,0,0,0,1,4,4,4,4,4,4,4,4,6,6,1,0,0,0,0,1,7,1,0],
+    [0,0,1,1,1,2,2,2,2,2,2,2,2,2,2,2,1,0,0,0,1,7,1,0],
+    [0,1,8,8,8,9,2,2,2,5,5,5,2,2,2,2,2,1,1,1,1,1,1,0],
+    [1,4,8,8,9,9,2,2,2,2,2,2,2,2,2,2,1,5,5,5,5,5,1,0],
+    [1,2,2,3,3,2,2,2,2,2,2,2,2,2,2,2,1,1,1,1,1,1,1,0],
+    [0,1,3,3,3,3,3,3,3,3,3,3,3,3,3,3,1,0,0,0,0,0,0,0],
+    [0,0,1,1,1,1,1,1,1,1,1,1,1,1,1,1,0,0,0,0,0,0,0,0],
+    [0,6,6,6,1,5,5,5,5,6,1,0,0,1,5,1,0,0,0,0,0,0,0,0],
+    [0,0,0,0,1,1,1,1,1,1,1,0,0,1,5,1,0,0,0,0,0,0,0,0],
+    [0,0,0,0,0,1,5,1,0,0,0,0,0,1,5,1,0,0,0,0,0,0,0,0],
+    [0,0,1,5,5,5,5,5,5,5,5,5,5,5,5,5,5,1,0,0,0,0,0,0],
 ];
 
 // Rotor principal (frames animados)
@@ -183,21 +185,22 @@ const CHOPPER_TAIL_ROTOR = {
 };
 
 function drawChopperFromTemplate(ctx, x, y, w, h, direction, palette) {
-    const templateWidth = 20 * PIXEL_SCALE;
+    const templateWidth = 24 * PIXEL_SCALE;
     const templateHeight = 14 * PIXEL_SCALE;
-    
+
+    const bob = Math.sin(frameCount * 0.12) * 1.5;
     const drawX = x + (w - templateWidth) / 2;
-    const drawY = y + (h - templateHeight) / 2;
-    
+    const drawY = y + (h - templateHeight) / 2 + bob;
+
     // Sombra
     ctx.fillStyle = 'rgba(0, 0, 0, 0.3)';
     ctx.beginPath();
     ctx.ellipse(x + w/2 + 15, y + h + 25, w/2 - 5, 6, 0, 0, Math.PI * 2);
     ctx.fill();
-    
-    // Espelhar se necessário
+
+    // Template base aponta o nariz para a esquerda; espelha ao voar para a direita
     ctx.save();
-    if (direction === 3) {
+    if (direction === 1) {
         ctx.translate(x + w, 0);
         ctx.scale(-1, 1);
         ctx.translate(-x, 0);
@@ -211,11 +214,10 @@ function drawChopperFromTemplate(ctx, x, y, w, h, direction, palette) {
     const rotorTemplate = CHOPPER_MAIN_ROTOR[`frame${rotorFrame}`];
     renderSpriteTemplate(ctx, rotorTemplate, palette, drawX, drawY - 5 * PIXEL_SCALE, PIXEL_SCALE);
     
-    // Rotor de cauda
+    // Rotor de cauda — sobre a deriva (o espelhamento do ctx cuida da direção)
     const tailFrame = Math.floor(frameCount / 2) % 2;
     const tailTemplate = CHOPPER_TAIL_ROTOR[`frame${tailFrame}`];
-    const tailX = direction === 3 ? drawX - 2 * PIXEL_SCALE : drawX + templateWidth - 2 * PIXEL_SCALE;
-    renderSpriteTemplate(ctx, tailTemplate, palette, tailX, drawY + 2 * PIXEL_SCALE, PIXEL_SCALE);
+    renderSpriteTemplate(ctx, tailTemplate, palette, drawX + templateWidth - 4 * PIXEL_SCALE, drawY + 2 * PIXEL_SCALE, PIXEL_SCALE);
     
     ctx.restore();
 }

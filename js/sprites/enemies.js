@@ -2,54 +2,105 @@
 // Templates e funções específicas para inimigos
 
 // ============ ENEMY TOWER ============
+// Torre de vigia: cabine blindada com janelas iluminadas sobre pernas de
+// concreto com contraventamento, antena com luz piscando e canhão que mira o jogador
+const TOWER_PALETTES = {
+    normal: {
+        0: null, 1: '#0a0a0a',
+        2: '#8a8a92', 3: '#5e5e66', 4: '#aeaeb6',   // concreto
+        5: '#8e2f2f', 6: '#5c1717', 7: '#b24a44',   // blindagem vermelha
+        8: '#ffd23c', 9: '#241a20',                 // janela (brilho / fundo)
+        10: '#4c4c56'                               // metal
+    },
+    flash: {
+        0: null, 1: '#f44', 2: '#f44', 3: '#f44', 4: '#f44',
+        5: '#f44', 6: '#f44', 7: '#f44', 8: '#f44', 9: '#f44', 10: '#f44'
+    }
+};
+
+// 20x26 pixels lógicos
+const TOWER_TEMPLATE = [
+    [0,0,0,0,0,0,0,0,0,10,10,0,0,0,0,0,0,0,0,0],
+    [0,0,0,0,0,0,0,0,0,10,10,0,0,0,0,0,0,0,0,0],
+    [0,0,0,0,0,0,0,0,0,10,10,0,0,0,0,0,0,0,0,0],
+    [0,0,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,0,0],
+    [0,0,1,7,7,5,5,5,5,5,5,5,5,5,5,5,5,1,0,0],
+    [0,0,1,7,5,5,5,5,5,5,5,5,5,5,5,5,6,1,0,0],
+    [0,0,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,0,0],
+    [0,0,0,0,1,7,5,5,5,5,5,5,5,5,7,1,0,0,0,0],
+    [0,0,0,0,1,5,9,9,9,5,5,9,9,9,5,1,0,0,0,0],
+    [0,0,0,0,1,5,9,8,9,5,5,9,8,9,5,1,0,0,0,0],
+    [0,0,0,0,1,5,9,9,9,5,5,9,9,9,5,1,0,0,0,0],
+    [0,0,0,0,1,6,5,5,5,5,5,5,5,5,6,1,0,0,0,0],
+    [0,0,0,0,1,6,6,6,6,6,6,6,6,6,6,1,0,0,0,0],
+    [0,0,0,0,1,1,1,1,1,1,1,1,1,1,1,1,0,0,0,0],
+    [0,0,1,4,4,4,4,4,4,4,4,4,4,4,4,4,4,1,0,0],
+    [0,0,1,3,3,3,3,3,3,3,3,3,3,3,3,3,3,1,0,0],
+    [0,0,0,1,2,2,1,0,0,0,0,0,0,1,2,2,1,0,0,0],
+    [0,0,0,1,2,3,1,10,0,0,0,0,10,1,3,2,1,0,0,0],
+    [0,0,0,1,2,3,1,0,10,0,0,10,0,1,3,2,1,0,0,0],
+    [0,0,0,1,2,3,1,0,0,10,10,0,0,1,3,2,1,0,0,0],
+    [0,0,0,1,2,3,1,0,10,0,0,10,0,1,3,2,1,0,0,0],
+    [0,0,0,1,2,3,1,10,0,0,0,0,10,1,3,2,1,0,0,0],
+    [0,0,0,1,2,3,1,0,0,0,0,0,0,1,3,2,1,0,0,0],
+    [0,0,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,0,0],
+    [0,1,3,2,2,2,2,2,2,2,2,2,2,2,2,2,2,3,1,0],
+    [0,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,0],
+];
+
 function drawEnemyTower(ctx, x, y, w, h, flash = false) {
-    const px = Math.floor(x / PIXEL_SCALE);
-    const py = Math.floor(y / PIXEL_SCALE);
-    const pw = Math.floor(w / PIXEL_SCALE);
-    const ph = Math.floor(h / PIXEL_SCALE);
-    const cx = px + pw / 2;
-    const cy = py + ph / 2;
-    
-    drawPixelShadow(ctx, cx + 2, py + ph + 1, pw - 4, 4);
-    
-    if (flash) {
-        ctx.globalAlpha = 0.8;
+    const palette = flash ? TOWER_PALETTES.flash : TOWER_PALETTES.normal;
+    const templateWidth = 20 * PIXEL_SCALE;
+    const templateHeight = 26 * PIXEL_SCALE;
+    const drawX = x + (w - templateWidth) / 2;
+    const drawY = y + (h - templateHeight) / 2;
+    const cx = x + w / 2;
+    const cy = y + h / 2;
+
+    // Sombra no chão
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.3)';
+    ctx.beginPath();
+    ctx.ellipse(cx, drawY + templateHeight, templateWidth / 2 - 2, 5, 0, 0, Math.PI * 2);
+    ctx.fill();
+
+    renderSpriteTemplate(ctx, TOWER_TEMPLATE, palette, drawX, drawY, PIXEL_SCALE);
+
+    // Canhão sob a cabine mirando o jogador
+    if (!flash && typeof player !== 'undefined' && player) {
+        const angle = Math.atan2(player.y + player.h / 2 - cy, player.x + player.w / 2 - cx);
+        ctx.save();
+        ctx.translate(cx, cy);
+        ctx.rotate(angle);
+        ctx.fillStyle = '#2e2e36';
+        ctx.fillRect(0, -2 * PIXEL_SCALE, 9 * PIXEL_SCALE, 4 * PIXEL_SCALE);
+        ctx.fillStyle = '#111';
+        ctx.fillRect(7 * PIXEL_SCALE, -1 * PIXEL_SCALE, 2 * PIXEL_SCALE, 2 * PIXEL_SCALE);
+        ctx.restore();
+        ctx.fillStyle = '#4c4c56';
+        ctx.beginPath();
+        ctx.arc(cx, cy, 3 * PIXEL_SCALE, 0, Math.PI * 2);
+        ctx.fill();
     }
-    
-    // Base
-    drawShadedRect(ctx, px + 2, py + ph - 8, pw - 4, 8, flash ? PALETTES.enemyRed : PALETTES.metal);
-    
-    // Corpo
-    drawShadedRect(ctx, px + 4, py + 8, pw - 8, ph - 16, flash ? PALETTES.enemyRed : PALETTES.purple);
-    
-    // Janelas
-    drawPixelFill(ctx, px + 6, py + 12, 2, 2, '#1a1a3a');
-    drawPixelFill(ctx, px + pw - 8, py + 12, 2, 2, '#1a1a3a');
-    drawPixelFill(ctx, px + 6, py + 16, 2, 2, '#1a1a3a');
-    drawPixelFill(ctx, px + pw - 8, py + 16, 2, 2, '#1a1a3a');
-    
-    // Teto
-    drawShadedRect(ctx, px + 3, py + 4, pw - 6, 5, flash ? PALETTES.enemyRed : PALETTES.purple);
-    drawPixelRect(ctx, px + 5, py + 1, pw - 10, 4, flash ? PALETTES.enemyRed.light : PALETTES.purple.light);
-    
-    // Antena
-    drawPixelRect(ctx, cx - 1, py - 10, 2, 12, PALETTES.metal.base);
-    
-    // Luz piscando
+
+    // Luz de alerta piscando no topo da antena
     const lightOn = frameCount % 30 < 15;
+    const lightX = cx;
+    const lightY = drawY - 2;
     if (lightOn) {
-        drawPixelCircle(ctx, cx, py - 11, 3, '#ff0000');
-        ctx.fillStyle = 'rgba(255, 0, 0, 0.3)';
-        ctx.fillRect((cx - 3) * PIXEL_SCALE, (py - 14) * PIXEL_SCALE, 6 * PIXEL_SCALE, 6 * PIXEL_SCALE);
+        ctx.fillStyle = 'rgba(255, 40, 40, 0.25)';
+        ctx.beginPath();
+        ctx.arc(lightX, lightY, 6 * PIXEL_SCALE, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = '#ff2828';
+        ctx.beginPath();
+        ctx.arc(lightX, lightY, 2 * PIXEL_SCALE, 0, Math.PI * 2);
+        ctx.fill();
     } else {
-        drawPixelCircle(ctx, cx, py - 11, 2, '#440000');
+        ctx.fillStyle = '#551111';
+        ctx.beginPath();
+        ctx.arc(lightX, lightY, 1.5 * PIXEL_SCALE, 0, Math.PI * 2);
+        ctx.fill();
     }
-    
-    // Canhão
-    drawShadedRect(ctx, cx - 2, cy - 2, 4, 4, PALETTES.darkMetal);
-    drawPixelFill(ctx, cx - 1, cy - 1, 2, 2, '#000000');
-    
-    ctx.globalAlpha = 1;
 }
 
 // ============ ENEMY BOSS ============
@@ -153,11 +204,11 @@ function drawEnemySoldier(ctx, x, y, w, h, direction, flash = false) {
 
 // ============ WINTER ENEMIES ============
 const SNOW_SOLDIER_PALETTE = {
-    0: null, 1: '#8090a0',
-    2: '#c4b5aa', 3: '#a49585', 4: '#e4d5ca',
-    5: '#d0d8e0', 6: '#a0b0c0', 7: '#e8f0f8',
-    8: '#b0b8c0', 9: '#808890', 10: '#d0d8e0',
-    11: '#c0c8d0', 12: '#304050', 13: '#b8c0c8'
+    0: null, 1: '#3a4450',
+    2: '#8a94a2', 3: '#6a7482', 4: '#a8b2c0',
+    5: '#dde4ec', 6: '#aab6c4', 7: '#f4f8fc',
+    8: '#7a828e', 9: '#565e6a', 10: '#9aa2ae',
+    11: '#454d58', 12: '#ff8c1a', 13: '#c8d2dc'
 };
 
 const SNOW_SOLDIER_FLASH = {
@@ -169,10 +220,16 @@ const SNOW_SOLDIER_FLASH = {
 function drawSnowSoldier(ctx, x, y, w, h, direction, flash = false) {
     const palette = flash ? SNOW_SOLDIER_FLASH : SNOW_SOLDIER_PALETTE;
     const template = getSoldierTemplate(direction, true);
-    
-    const drawX = Math.floor(x / PIXEL_SCALE);
-    const drawY = Math.floor(y / PIXEL_SCALE);
-    
+
+    const templateWidth = 16 * PIXEL_SCALE;
+    const templateHeight = 20 * PIXEL_SCALE;
+    const drawX = x + (w - templateWidth) / 2;
+    const drawY = y + (h - templateHeight) / 2;
+
+    const shadowW = 12 * PIXEL_SCALE;
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.25)';
+    ctx.fillRect(x + (w - shadowW) / 2, y + h - 4, shadowW, 4);
+
     renderSpriteTemplate(ctx, template, palette, drawX, drawY, PIXEL_SCALE);
     
     if (Math.random() > 0.7) {
