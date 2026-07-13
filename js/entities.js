@@ -91,6 +91,7 @@ class Player extends Entity {
     
     update() {
         if (this.invulnTime > 0) this.invulnTime--;
+        if (shotBuffer > 0) shotBuffer--;
 
         const isTrainLevel = levels[currentLevelIndex] && levels[currentLevelIndex].type === 'train';
         const isWinterLevel = levels[currentLevelIndex] && levels[currentLevelIndex].type === 'winter';
@@ -115,7 +116,8 @@ class Player extends Entity {
             }
             
             // Atirar com clique do mouse
-            if (mouseDown && this.cooldown <= 0) {
+            if ((mouseDown || shotBuffer > 0) && this.cooldown <= 0) {
+                shotBuffer = 0;
                 sniperShoot();
                 this.cooldown = 20; // Cooldown mínimo para evitar cliques duplos
             }
@@ -201,7 +203,7 @@ class Player extends Entity {
             if (this.flashTime > 0) this.flashTime--;
             
             // Tiro normal (controlado pelo mouse)
-            if (mouseDown && this.cooldown <= 0 && this.ammo > 0 && !this.reloading) {
+            if ((mouseDown || shotBuffer > 0) && this.cooldown <= 0 && this.ammo > 0 && !this.reloading) {
                 this.shoot();
             }
             
@@ -419,7 +421,7 @@ class Player extends Entity {
             if (this.flashTime > 0) this.flashTime--;
             
             // Tiro controlado pelo mouse
-            if (mouseDown && this.cooldown <= 0 && this.ammo > 0 && !this.reloading) {
+            if ((mouseDown || shotBuffer > 0) && this.cooldown <= 0 && this.ammo > 0 && !this.reloading) {
                 this.shoot();
             }
             
@@ -485,10 +487,10 @@ class Player extends Entity {
             }, 2000);
         }
         
-        if (mouseDown && this.cooldown <= 0 && this.ammo > 0 && !this.reloading) {
+        if ((mouseDown || shotBuffer > 0) && this.cooldown <= 0 && this.ammo > 0 && !this.reloading) {
             this.shoot();
         }
-        
+
         if (this.flashTime > 0) this.flashTime--;
     }
     
@@ -536,7 +538,8 @@ class Player extends Entity {
             
             if (!hasPowerup('infiniteAmmo')) this.ammo -= ammoCost;
             this.cooldown = this.maxCooldown;
-            
+            shotBuffer = 0; // Clique bufferizado consumido por este tiro
+
             AudioEngine.playShoot(this.type);
             addScreenShake(this.type === 'tank' ? 3 : 1);
         }

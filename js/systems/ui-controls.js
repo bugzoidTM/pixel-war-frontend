@@ -237,7 +237,15 @@ function updateVolume(value) {
 
 function updateUI() {
     document.getElementById('hp-text').innerText = Math.max(0, Math.ceil(player.hp)) + '/' + player.maxHp;
-    document.getElementById('ammo-text').innerText = player.ammo + '/' + player.maxAmmo;
+    const ammoText = document.getElementById('ammo-text');
+    if (player.reloading) {
+        ammoText.innerText = I18n.t('hud.reloading');
+        // Pisca para chamar atenção enquanto não dá para atirar
+        ammoText.style.opacity = Math.floor(frameCount / 20) % 2 === 0 ? '1' : '0.4';
+    } else {
+        ammoText.innerText = player.ammo + '/' + player.maxAmmo;
+        ammoText.style.opacity = '1';
+    }
     document.getElementById('hp-fill').style.width = (Math.max(0, player.hp) / player.maxHp * 100) + '%';
     document.getElementById('ammo-fill').style.width = (player.ammo / player.maxAmmo * 100) + '%';
     document.getElementById('score-display').innerText = score.toLocaleString();

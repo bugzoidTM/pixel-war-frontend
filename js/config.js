@@ -930,6 +930,7 @@ let POWERUP_BLINK_START = 180;
 const keys = { w: false, W: false, a: false, A: false, s: false, S: false, d: false, D: false, r: false, R: false, ' ': false, Shift: false, ArrowUp: false, ArrowDown: false, ArrowLeft: false, ArrowRight: false };
 let mouseX = 0, mouseY = 0;
 let mouseDown = false;
+let shotBuffer = 0; // Frames restantes de "clique lembrado" (dispara assim que cooldown/reload permitir)
 
 // ============ SERVER DATA INTEGRATION ============
 

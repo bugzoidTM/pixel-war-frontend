@@ -27,8 +27,10 @@ canvas.addEventListener('mousemove', (e) => {
 
 canvas.addEventListener('mousedown', (e) => {
     if (e.button === 0) {
+        e.preventDefault(); // Evita seleção/drag que "engole" o mouseup
         mouseDown = true;
-        
+        shotBuffer = 8; // Cliques rápidos durante o cooldown ainda disparam quando a arma liberar
+
         // Handler especial para fase Sniper
         if (gameState === 'PLAYING' && levels[currentLevelIndex] && levels[currentLevelIndex].type === 'sniper') {
             if (typeof handleSniperClick === 'function') {
@@ -38,6 +40,13 @@ canvas.addEventListener('mousedown', (e) => {
     }
 });
 
-canvas.addEventListener('mouseup', (e) => {
+// mouseup no window: soltar o botão fora do canvas também para o tiro
+window.addEventListener('mouseup', (e) => {
     if (e.button === 0) mouseDown = false;
+});
+
+// Janela perdeu o foco (alt-tab, menu de contexto): nunca deixar o tiro travado
+window.addEventListener('blur', () => {
+    mouseDown = false;
+    shotBuffer = 0;
 });
