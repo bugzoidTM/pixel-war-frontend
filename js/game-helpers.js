@@ -246,22 +246,53 @@ function updateParallaxScroll() {
     }
 }
 
-function drawParallaxBackground(theme = 'default') {
+function drawParallaxBackground(theme = 'default', groundColor = null) {
     if (!PARALLAX_CONFIG.enabled) return;
-    
+
     const config = PARALLAX_THEMES[theme] || PARALLAX_THEMES.default;
     updateParallaxScroll();
-    
+
     // CAMADA 1: Céu (simplificado)
     drawParallaxSky(config.sky);
-    
-    // CAMADA 2: Meio - apenas a cada 2 frames para performance
-    if (parallaxFrameSkip % 2 === 0) {
-        drawParallaxMidLayer(config.mid);
+
+    // CAMADA 2: Meio (montanhas/prédios) - todo frame para evitar flicker
+    drawParallaxMidLayer(config.mid);
+
+    // CAMADA 2.5: Chão - cobre do horizonte até a base da tela
+    // (sem isso a área entre o céu e o rodapé fica preta)
+    if (groundColor) {
+        drawParallaxGround(groundColor);
     }
-    
-    // CAMADA 3: Frente
+
+    // CAMADA 3: Frente (desenhada sobre o chão)
     drawParallaxForeground(config.foreground);
+}
+
+function drawParallaxGround(groundColor) {
+    const horizonY = Math.floor(canvas.height * 0.55);
+
+    const gradient = ctx.createLinearGradient(0, horizonY, 0, canvas.height);
+    gradient.addColorStop(0, adjustColor(groundColor, 22));
+    gradient.addColorStop(0.55, groundColor);
+    gradient.addColorStop(1, adjustColor(groundColor, -35));
+    ctx.fillStyle = gradient;
+    ctx.fillRect(0, horizonY, canvas.width, canvas.height - horizonY);
+
+    // Linha de horizonte sutil (transição céu/chão)
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.08)';
+    ctx.fillRect(0, horizonY, canvas.width, 2);
+
+    // Padrão de checkerboard sutil no chão (dá textura sem poluir)
+    if (groundColor !== '#1a1a1a') {
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.10)';
+        for (let x = 0; x < canvas.width; x += 50) {
+            for (let y = horizonY - (horizonY % 50); y < canvas.height; y += 50) {
+                if ((x + y) % 100 === 0) {
+                    ctx.fillRect(x, Math.max(y, horizonY), 50, Math.min(50, canvas.height - y));
+                }
+            }
+        }
+    }
 }
 
 function drawParallaxSky(skyConfig) {
@@ -690,28 +721,9 @@ function drawBackground() {
     } else {
         // Background padrão com PARALLAX para profundidade
         const theme = getParallaxTheme();
-        
-        // Desenhar camadas de parallax
-        drawParallaxBackground(theme);
-        
-        // Chão base sobre o parallax
-        const gradient = ctx.createLinearGradient(0, canvas.height - 80, 0, canvas.height);
-        gradient.addColorStop(0, bgColor);
-        gradient.addColorStop(1, '#1a1a1a');
-        ctx.fillStyle = gradient;
-        ctx.fillRect(0, canvas.height - 80, canvas.width, 80);
-        
-        // Padrão de checkerboard sutil no chão
-        if (bgColor !== '#1a1a1a') {
-            ctx.fillStyle = 'rgba(0,0,0,0.15)';
-            for (let x = 0; x < canvas.width; x += 50) {
-                for (let y = canvas.height - 80; y < canvas.height; y += 50) {
-                    if ((x + y) % 100 === 0) {
-                        ctx.fillRect(x, y, 50, 50);
-                    }
-                }
-            }
-        }
+
+        // Desenhar camadas de parallax (céu, montanhas, chão e vegetação)
+        drawParallaxBackground(theme, bgColor);
     }
 }
 

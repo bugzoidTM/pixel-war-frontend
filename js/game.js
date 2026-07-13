@@ -39,6 +39,12 @@ async function startGame() {
         LoadingScreen.showError('Falha ao conectar ao servidor. Usando dados offline.');
         await new Promise(resolve => setTimeout(resolve, 2000));
         LoadingScreen.hide();
+        
+        // Sem fases do servidor, usar fallback local (senão iria direto à tela de vitória)
+        if (levels.length === 0 && typeof FALLBACK_LEVELS !== 'undefined') {
+            levels = FALLBACK_LEVELS.map(l => ({ ...l }));
+            console.warn('⚠️ Usando', levels.length, 'fases offline');
+        }
     }
     
     AudioEngine.init();
@@ -1241,7 +1247,8 @@ function checkCollisions() {
             player.x < e.x + e.w && player.x + player.w > e.x &&
             player.y < e.y + e.h && player.y + player.h > e.y) {
             if (!hasPowerup('shield')) {
-                player.takeDamage(2);
+                // Dano por contato (limitado pelos frames de invulnerabilidade)
+                player.takeDamage(8);
             }
         }
     });
@@ -1311,7 +1318,8 @@ function applyUpgrade(type) {
     console.log('✅ Fase vencida! Score consolidado:', totalScore);
     
     // Atualizar bestScore se superou recorde
-    if (totalScore > bestScore) {
+    const beatRecord = totalScore > bestScore;
+    if (beatRecord) {
         bestScore = totalScore;
         console.log('🏆 Novo recorde pessoal:', bestScore);
         // Enviar ao ranking apenas quando superar recorde
@@ -1349,11 +1357,8 @@ function applyUpgrade(type) {
         if (victoryScoreEl) victoryScoreEl.innerText = totalScore.toLocaleString();
         document.getElementById('victory-screen').classList.remove('hidden');
         
-        // Enviar score ao servidor apenas se for novo recorde
-        const isHighScore = totalScore > bestScore;
-        if (isHighScore) {
-            bestScore = totalScore;
-        }
+        // beatRecord foi calculado antes do commit do bestScore
+        const isHighScore = beatRecord;
         HighScoreManager.saveAndSubmit('JOGADOR', totalScore, selectedClass, 12, true).then(result => {
             if (result.server && result.server.rank) {
                 const rankText = document.createElement('div');
@@ -1543,7 +1548,9 @@ function getLevelName(index) {
         'Winter Storm',
         'Sky Fortress',
         'Vertical Shmup',
-        'A Fuga'
+        'A Fuga',
+        'Rota de Fuga',
+        'Sniper Elite'
     ];
     return names[index] || `Operação ${index + 1}`;
 }
@@ -1715,19 +1722,20 @@ function loop() {
         
         updateUI();
         
-        // Verificar game over
+        // Verificar game over (mesmo rollback do caminho principal)
         if (player.hp <= 0) {
             gameState = 'GAMEOVER';
             AudioEngine.stopMusic();
             AudioEngine.playGameOver();
             HighScoreManager.addDeath();
             
-            const isHighScore = HighScoreManager.isNewHighScore(score);
-            HighScoreManager.saveAndSubmit('JOGADOR', score, selectedClass, currentLevelIndex + 1, false);
+            // ROLLBACK: Descartar pontuação da fase (derrota)
+            phaseScore = 0;
+            score = totalScore;
             
-            document.getElementById('final-score').innerText = 'SCORE FINAL: ' + score.toLocaleString();
-            if (isHighScore && score > 0) {
-                document.getElementById('final-score').innerText += '\n🏆 NOVO RECORDE!';
+            document.getElementById('final-score').innerText = 'SCORE SALVO: ' + totalScore.toLocaleString();
+            if (totalScore > 0 && totalScore >= bestScore) {
+                document.getElementById('final-score').innerText += '\n🏆 SEU MELHOR: ' + bestScore.toLocaleString();
             }
             document.getElementById('gameover-screen').classList.remove('hidden');
         }
@@ -1743,19 +1751,20 @@ function loop() {
         drawEscapeRouteLevel();
         updateUI();
         
-        // Verificar game over
+        // Verificar game over (mesmo rollback do caminho principal)
         if (player.hp <= 0) {
             gameState = 'GAMEOVER';
             AudioEngine.stopMusic();
             AudioEngine.playGameOver();
             HighScoreManager.addDeath();
             
-            const isHighScore = HighScoreManager.isNewHighScore(score);
-            HighScoreManager.saveAndSubmit('JOGADOR', score, selectedClass, currentLevelIndex + 1, false);
+            // ROLLBACK: Descartar pontuação da fase (derrota)
+            phaseScore = 0;
+            score = totalScore;
             
-            document.getElementById('final-score').innerText = 'SCORE FINAL: ' + score.toLocaleString();
-            if (isHighScore && score > 0) {
-                document.getElementById('final-score').innerText += '\n🏆 NOVO RECORDE!';
+            document.getElementById('final-score').innerText = 'SCORE SALVO: ' + totalScore.toLocaleString();
+            if (totalScore > 0 && totalScore >= bestScore) {
+                document.getElementById('final-score').innerText += '\n🏆 SEU MELHOR: ' + bestScore.toLocaleString();
             }
             document.getElementById('gameover-screen').classList.remove('hidden');
         }

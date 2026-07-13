@@ -445,6 +445,15 @@ let nextPowerupSpawn = 200;
 // This is a fallback/placeholder - actual data comes from server
 let levels = [];
 
+// Fases offline usadas quando o servidor está inacessível
+const FALLBACK_LEVELS = [
+    { id: 1, objective: 'Derrote 10 inimigos', type: 'kill', target: 10, spawnRate: 60, bg: '#4a7a3a', enemies: ['soldier'], maxEnemies: 12 },
+    { id: 2, objective: 'Destrua 3 torres', type: 'kill_static', target: 3, spawnRate: 70, bg: '#4a3c2a', enemies: ['soldier', 'tower'], maxEnemies: 10 },
+    { id: 3, objective: 'Sobreviva 45 segundos', type: 'survival', target: 45, spawnRate: 50, bg: '#3a2a2a', enemies: ['soldier', 'tank'], maxEnemies: 14 },
+    { id: 4, objective: 'Derrote 15 inimigos', type: 'kill', target: 15, spawnRate: 50, bg: '#2d4a2d', enemies: ['soldier', 'tank', 'chopper'], maxEnemies: 14 },
+    { id: 5, objective: 'Destrua o Boss', type: 'boss', target: 1, spawnRate: 60, bg: '#1a1a1a', enemies: ['soldier', 'tank'], maxEnemies: 15 }
+];
+
 // Function to get current level from server data
 function getCurrentLevel() {
     const levelConfig = DataLoader.getLevelConfig(currentLevelIndex + 1);
@@ -787,10 +796,6 @@ let ESCAPE_ROUTE_CONFIG = {
     rpgSoldierSpawnRate: 300,
     rpgRocketSpeed: 6,
     rpgDamage: 20,
-    
-    // Dano
-    mineDamage: 30,
-    collisionDamage: 15,
     
     // Dano
     mineDamage: 35,

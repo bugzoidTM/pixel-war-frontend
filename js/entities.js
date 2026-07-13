@@ -25,11 +25,18 @@ class Entity {
     getCenter() { return { x: this.x + this.w / 2, y: this.y + this.h / 2 }; }
     
     takeDamage(amount) {
+        // Jogador tem frames de invulnerabilidade após levar dano
+        // (evita morte instantânea por dano de contato aplicado a cada frame)
+        if (this === player) {
+            if (this.invulnTime > 0) return;
+            this.invulnTime = 40;
+        }
+
         this.hp -= amount;
         this.flashTime = 5;
         addScreenShake(3);
         if (this !== player) AudioEngine.playDamage();
-        
+
         // Trigger UI damage pulse for player
         if (this === player && typeof triggerDamagePulse === 'function') {
             const intensity = Math.min(amount / this.maxHp, 1);
@@ -49,6 +56,7 @@ class Player extends Entity {
         this.reloading = false;
         this.damage = 10;
         this.isMoving = false;
+        this.invulnTime = 0; // Frames de invulnerabilidade após levar dano
         
         // Side-scroller physics (para fase train)
         this.grounded = true;
@@ -82,6 +90,8 @@ class Player extends Entity {
     }
     
     update() {
+        if (this.invulnTime > 0) this.invulnTime--;
+
         const isTrainLevel = levels[currentLevelIndex] && levels[currentLevelIndex].type === 'train';
         const isWinterLevel = levels[currentLevelIndex] && levels[currentLevelIndex].type === 'winter';
         const isShmupLevel = levels[currentLevelIndex] && levels[currentLevelIndex].type === 'shmup';
@@ -131,11 +141,11 @@ class Player extends Entity {
             
             // Movimento horizontal
             const escapeSpeed = this.speed * cfg.playerSpeedBoost;
-            if (keys.a || keys.A) { this.vx = -escapeSpeed; this.isMoving = true; }
-            if (keys.d || keys.D) { this.vx = escapeSpeed; this.isMoving = true; }
+            if (keys.a || keys.A || keys.ArrowLeft) { this.vx = -escapeSpeed; this.isMoving = true; }
+            if (keys.d || keys.D || keys.ArrowRight) { this.vx = escapeSpeed; this.isMoving = true; }
             
-            // Pulo com W ou Espaço
-            if ((keys.w || keys.W || keys[' ']) && this.grounded) {
+            // Pulo com W, seta cima ou Espaço
+            if ((keys.w || keys.W || keys.ArrowUp || keys[' ']) && this.grounded) {
                 this.velocityY = cfg.jumpForce;
                 this.grounded = false;
                 AudioEngine.playJump && AudioEngine.playJump();
@@ -215,12 +225,12 @@ class Player extends Entity {
             
             // Movimento horizontal rápido apenas
             const shmupSpeed = this.speed * SHMUP_CONFIG.playerSpeedBoost;
-            if (keys.a || keys.A) { this.vx = -shmupSpeed; this.isMoving = true; }
-            if (keys.d || keys.D) { this.vx = shmupSpeed; this.isMoving = true; }
+            if (keys.a || keys.A || keys.ArrowLeft) { this.vx = -shmupSpeed; this.isMoving = true; }
+            if (keys.d || keys.D || keys.ArrowRight) { this.vx = shmupSpeed; this.isMoving = true; }
             
             // Pequeno movimento vertical para ajuste fino
-            if (keys.w || keys.W) { this.vy = -shmupSpeed * 0.5; this.isMoving = true; }
-            if (keys.s || keys.S) { this.vy = shmupSpeed * 0.5; this.isMoving = true; }
+            if (keys.w || keys.W || keys.ArrowUp) { this.vy = -shmupSpeed * 0.5; this.isMoving = true; }
+            if (keys.s || keys.S || keys.ArrowDown) { this.vy = shmupSpeed * 0.5; this.isMoving = true; }
             
             // Aplicar movimento
             this.x += this.vx;
@@ -266,12 +276,12 @@ class Player extends Entity {
             this.vy = 0;
             this.isMoving = false;
             
-            // Movimento horizontal apenas (A/D)
-            if (keys.a || keys.A) { this.vx = -this.speed; this.isMoving = true; }
-            if (keys.d || keys.D) { this.vx = this.speed; this.isMoving = true; }
+            // Movimento horizontal apenas (A/D ou setas)
+            if (keys.a || keys.A || keys.ArrowLeft) { this.vx = -this.speed; this.isMoving = true; }
+            if (keys.d || keys.D || keys.ArrowRight) { this.vx = this.speed; this.isMoving = true; }
             
-            // Pulo com espaço (sem duplo pulo)
-            if (keys[' '] && this.grounded) {
+            // Pulo com espaço ou seta cima (sem duplo pulo)
+            if ((keys[' '] || keys.ArrowUp) && this.grounded) {
                 this.velocityY = TRAIN_CONFIG.jumpForce;
                 this.grounded = false;
                 AudioEngine.playExplosion(); // Som de pulo
@@ -301,10 +311,10 @@ class Player extends Entity {
             
             // Aceleração gradual em vez de velocidade instantânea
             const accel = WINTER_CONFIG.accelerationRate;
-            if (keys.w || keys.W) { this.vy -= accel; this.isMoving = true; }
-            if (keys.s || keys.S) { this.vy += accel; this.isMoving = true; }
-            if (keys.a || keys.A) { this.vx -= accel; this.isMoving = true; }
-            if (keys.d || keys.D) { this.vx += accel; this.isMoving = true; }
+            if (keys.w || keys.W || keys.ArrowUp) { this.vy -= accel; this.isMoving = true; }
+            if (keys.s || keys.S || keys.ArrowDown) { this.vy += accel; this.isMoving = true; }
+            if (keys.a || keys.A || keys.ArrowLeft) { this.vx -= accel; this.isMoving = true; }
+            if (keys.d || keys.D || keys.ArrowRight) { this.vx += accel; this.isMoving = true; }
             
             // Aplicar fricção do gelo (continua deslizando)
             this.vx *= WINTER_CONFIG.friction;
@@ -340,12 +350,12 @@ class Player extends Entity {
             this.vx = 0;
             this.isMoving = false;
             
-            // Movimento horizontal (A/D)
-            if (keys.a || keys.A) { this.vx = -this.speed * 1.2; this.isMoving = true; }
-            if (keys.d || keys.D) { this.vx = this.speed * 1.2; this.isMoving = true; }
+            // Movimento horizontal (A/D ou setas)
+            if (keys.a || keys.A || keys.ArrowLeft) { this.vx = -this.speed * 1.2; this.isMoving = true; }
+            if (keys.d || keys.D || keys.ArrowRight) { this.vx = this.speed * 1.2; this.isMoving = true; }
             
-            // Pulo com W ou Espaço (apenas quando no chão)
-            if ((keys.w || keys.W || keys[' ']) && skyPlayerGrounded) {
+            // Pulo com W, seta cima ou Espaço (apenas quando no chão)
+            if ((keys.w || keys.W || keys.ArrowUp || keys[' ']) && skyPlayerGrounded) {
                 skyPlayerVY = cfg.jumpForce;
                 skyPlayerGrounded = false;
                 if (AudioEngine.playJump) AudioEngine.playJump();
@@ -425,15 +435,15 @@ class Player extends Entity {
             return; // Não executar o resto do update
             
         } else {
-            // Modo normal (4 direções)
+            // Modo normal (4 direções) - WASD ou setas
             this.vx = 0;
             this.vy = 0;
             this.isMoving = false;
-            
-            if (keys.w || keys.W) { this.vy = -this.speed; this.isMoving = true; }
-            if (keys.s || keys.S) { this.vy = this.speed; this.isMoving = true; }
-            if (keys.a || keys.A) { this.vx = -this.speed; this.isMoving = true; }
-            if (keys.d || keys.D) { this.vx = this.speed; this.isMoving = true; }
+
+            if (keys.w || keys.W || keys.ArrowUp) { this.vy = -this.speed; this.isMoving = true; }
+            if (keys.s || keys.S || keys.ArrowDown) { this.vy = this.speed; this.isMoving = true; }
+            if (keys.a || keys.A || keys.ArrowLeft) { this.vx = -this.speed; this.isMoving = true; }
+            if (keys.d || keys.D || keys.ArrowRight) { this.vx = this.speed; this.isMoving = true; }
             
             const center = this.getCenter();
             const dx = mouseX - center.x;
@@ -564,7 +574,12 @@ class Player extends Entity {
     
     draw(ctx) {
         const flash = this.flashTime > 0;
-        
+
+        // Piscar durante invulnerabilidade (feedback visual de dano)
+        if (this.invulnTime > 0 && Math.floor(frameCount / 4) % 2 === 0) {
+            return;
+        }
+
         if (this.type === 'soldier') {
             drawHumanSoldier(ctx, this.x, this.y, this.w, this.h, this.direction, this.isMoving, flash);
         } else if (this.type === 'tank') {
