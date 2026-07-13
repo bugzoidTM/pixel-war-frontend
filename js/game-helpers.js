@@ -185,6 +185,93 @@ function generateDecorations() {
     }
 }
 
+// ============ SISTEMA DE COMBO DE KILLS ============
+// Kills em sequência rápida multiplicam os pontos (x1.5 / x2 / x3)
+
+const COMBO_WINDOW_FRAMES = 150; // 2.5s para manter o combo
+
+let comboKills = 0;
+let comboLastKillFrame = -9999;
+
+function getComboMultiplier() {
+    if (comboKills >= 8) return 3;
+    if (comboKills >= 5) return 2;
+    if (comboKills >= 3) return 1.5;
+    return 1;
+}
+
+function resetCombo() {
+    comboKills = 0;
+    comboLastKillFrame = -9999;
+}
+
+// Registra um kill: aplica multiplicador de combo e mostra feedback
+function registerKillScore(e) {
+    if (frameCount - comboLastKillFrame <= COMBO_WINDOW_FRAMES) {
+        comboKills++;
+    } else {
+        comboKills = 1;
+    }
+    comboLastKillFrame = frameCount;
+
+    const mult = getComboMultiplier();
+    const pts = Math.round(e.scoreValue * mult);
+    phaseScore += pts;
+    score = totalScore + phaseScore;
+
+    const cx = e.x + e.w / 2;
+    const cy = e.y;
+    if (mult > 1) {
+        floatingTexts.push(new FloatingText(cx, cy - 12, 'x' + mult + ' +' + pts, '#ffd700'));
+    } else {
+        floatingTexts.push(new FloatingText(cx, cy - 12, '+' + pts, '#ffffff'));
+    }
+}
+
+// ============ BARRA DE HP DOS INIMIGOS ============
+// Aparece apenas em inimigos danificados (boss tem barra própria)
+
+function drawEnemyHPBar(ctx, e) {
+    if (e.dead || e.hp >= e.maxHp || e.hp <= 0 || e.type === 'boss') return;
+
+    const w = Math.max(e.w, 22);
+    const x = e.x + e.w / 2 - w / 2;
+    const y = e.y - 9;
+    const pct = Math.max(0, e.hp / e.maxHp);
+
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.65)';
+    ctx.fillRect(x, y, w, 5);
+    ctx.fillStyle = pct > 0.5 ? '#4ade80' : (pct > 0.25 ? '#facc15' : '#ef4444');
+    ctx.fillRect(x + 1, y + 1, (w - 2) * pct, 3);
+}
+
+// ============ MIRA (CROSSHAIR) ============
+// Substitui o cursor do sistema durante o gameplay (cursor: none no canvas)
+
+function drawCrosshair(ctx, force = false) {
+    if (!force) {
+        const lvl = levels[currentLevelIndex];
+        if (lvl && (lvl.type === 'sniper' || lvl.type === 'escaperoute')) return;
+    }
+
+    const x = mouseX, y = mouseY;
+    ctx.save();
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.9)';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.arc(x, y, 10, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.moveTo(x - 16, y); ctx.lineTo(x - 6, y);
+    ctx.moveTo(x + 6, y); ctx.lineTo(x + 16, y);
+    ctx.moveTo(x, y - 16); ctx.lineTo(x, y - 6);
+    ctx.moveTo(x, y + 6); ctx.lineTo(x, y + 16);
+    ctx.stroke();
+    ctx.fillStyle = '#ff4444';
+    ctx.fillRect(x - 1.5, y - 1.5, 3, 3);
+    ctx.restore();
+}
+
 // ============ PARALLAX BACKGROUND SYSTEM (OPTIMIZED) ============
 // Sistema de fundo com 3 camadas - otimizado para performance
 

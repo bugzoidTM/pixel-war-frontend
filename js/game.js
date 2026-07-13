@@ -60,6 +60,12 @@ async function startGame() {
     phaseScore = 0;
     score = 0;
     
+    // Resetar fase bônus para a nova campanha
+    if (typeof bonusStagePlayed !== 'undefined') {
+        bonusStagePlayed = false;
+        lastBonusResult = null;
+    }
+    
     // Carregar bestScore do servidor se logado
     if (typeof HighScoreManager !== 'undefined') {
         bestScore = HighScoreManager.getHighScore() || 0;
@@ -142,6 +148,7 @@ function generateIcons() {
 }
 
 async function startLevel(idx) {
+    const lvl0 = levels[idx];
     if (idx >= levels.length) {
         gameState = 'VICTORY';
         AudioEngine.stopMusic();
@@ -201,6 +208,12 @@ async function startLevel(idx) {
     
     // Resetar flag de survival
     survivalStarted = false;
+    
+    // Resetar combo de kills
+    if (typeof resetCombo === 'function') resetCombo();
+    
+    // Cursor: mira desenhada substitui o cursor (exceto na fase de corrida)
+    canvas.style.cursor = (lvl0 && lvl0.type === 'escaperoute') ? 'default' : 'none';
     
     // IMPORTANTE: Usar lvl APÓS carregar config do servidor
     const lvl = levels[idx];
@@ -1169,8 +1182,7 @@ function checkCollisions() {
                     
                     if (e.hp <= 0) {
                         e.dead = true;
-                        phaseScore += e.scoreValue;
-                        score = totalScore + phaseScore; // Atualizar score visual
+                        registerKillScore(e); // Pontos com multiplicador de combo
                         HighScoreManager.addKill(); // Track kills for rankings
                         
                         // Determinar tipo de inimigo para efeitos visuais
@@ -1248,7 +1260,22 @@ function checkCollisions() {
             player.y < e.y + e.h && player.y + player.h > e.y) {
             if (!hasPowerup('shield')) {
                 // Dano por contato (limitado pelos frames de invulnerabilidade)
+                const wasVulnerable = player.invulnTime <= 0;
                 player.takeDamage(8);
+                
+                // Knockback: empurra o jogador para longe (evita ficar preso no inimigo)
+                const lvl = levels[currentLevelIndex];
+                const freeMove = lvl && ['kill', 'kill_static', 'survival', 'boss', 'winter'].includes(lvl.type);
+                if (wasVulnerable && freeMove) {
+                    const pc = player.getCenter();
+                    const ec = e.getCenter();
+                    let dx = pc.x - ec.x, dy = pc.y - ec.y;
+                    const d = Math.hypot(dx, dy) || 1;
+                    player.x += (dx / d) * 24;
+                    player.y += (dy / d) * 24;
+                    player.x = Math.max(0, Math.min(canvas.width - player.w, player.x));
+                    player.y = Math.max(0, Math.min(canvas.height - player.h, player.y));
+                }
             }
         }
     });
@@ -1374,6 +1401,12 @@ function applyUpgrade(type) {
         return;
     }
     
+    // FASE BÔNUS: pontuação expert desbloqueia fase extra
+    if (typeof shouldEnterBonusStage === 'function' && shouldEnterBonusStage()) {
+        startBonusStage();
+        return;
+    }
+    
     // Mostrar tela de seleção de classe para próxima fase
     showClassChangeScreen();
 }
@@ -1394,6 +1427,19 @@ function showClassChangeScreen() {
         const orText = I18n.currentLang === 'pt' ? 'ou' : 'or';
         const availableText = I18n.currentLang === 'pt' ? 'disponível!' : 'available!';
         infoText += `\n⚠️ ${onlyText} ${restrictedClasses.join(` ${orText} `).toUpperCase()} ${availableText}`;
+    }
+    
+    // Feedback da fase bônus (conquistada ou perdida)
+    if (typeof BONUS_STAGE !== 'undefined' && currentLevelIndex === BONUS_STAGE.afterLevelIndex) {
+        if (lastBonusResult !== null) {
+            infoText += I18n.currentLang === 'pt'
+                ? `\n⭐ FASE BÔNUS: +${lastBonusResult.toLocaleString()} pontos!`
+                : `\n⭐ BONUS STAGE: +${lastBonusResult.toLocaleString()} points!`;
+        } else if (totalScore < BONUS_STAGE.expertScore) {
+            infoText += I18n.currentLang === 'pt'
+                ? `\n⭐ Fase Bônus exigia ${BONUS_STAGE.expertScore.toLocaleString()} pts (você fez ${totalScore.toLocaleString()})`
+                : `\n⭐ Bonus Stage needed ${BONUS_STAGE.expertScore.toLocaleString()} pts (you got ${totalScore.toLocaleString()})`;
+        }
     }
     document.getElementById('next-mission-info').innerText = infoText;
     
@@ -1600,7 +1646,9 @@ function loop() {
         // Texto principal
         ctx.fillStyle = countdownNumber > 0 ? '#ffffff' : '#00ff00';
         ctx.fillText(countText, canvas.width / 2, canvas.height / 2);
-        
+
+        drawCrosshair(ctx);
+
         ctx.restore();
         
         if (countdownTimer >= 60) {
@@ -1679,6 +1727,23 @@ function loop() {
             document.getElementById('upgrade-screen').classList.remove('hidden');
         }
         
+        requestAnimationFrame(loop);
+        return;
+    }
+    
+    // Fase bônus (pontuação expert)
+    if (gameState === 'BONUS') {
+        ctx.save();
+        updateScreenShake();
+        ctx.translate(shakeX, shakeY);
+        ctx.clearRect(-20, -20, canvas.width + 40, canvas.height + 40);
+        frameCount++;
+        
+        updateBonusStage();
+        drawBonusStage();
+        updateUI();
+        
+        ctx.restore();
         requestAnimationFrame(loop);
         return;
     }
@@ -1893,6 +1958,24 @@ function loop() {
     // Bonus crates
     bonusCrates = bonusCrates.filter(c => !c.dead);
     bonusCrates.forEach(c => {
+        // Ímã: caixas derivam até o jogador quando próximo; contato coleta
+        if (!c.dead && player) {
+            const pc = player.getCenter();
+            const dx = pc.x - (c.x + c.w / 2);
+            const dy = pc.y - (c.y + c.h / 2);
+            const d = Math.hypot(dx, dy);
+            if (d < 120 && d > 4) {
+                c.x += (dx / d) * 2.2;
+                c.y += (dy / d) * 2.2;
+            }
+            if (player.x < c.x + c.w && player.x + player.w > c.x &&
+                player.y < c.y + c.h && player.y + player.h > c.y) {
+                c.dead = true;
+                collectPowerup(c);
+                return;
+            }
+        }
+
         // Movimento especial para shmup
         if (c.isShmupCrate) {
             // Movimento vertical (descendo)
@@ -1923,7 +2006,7 @@ function loop() {
     player.draw(ctx);
     
     enemies = enemies.filter(e => !e.dead);
-    enemies.forEach(e => { e.update(); e.draw(ctx); });
+    enemies.forEach(e => { e.update(); e.draw(ctx); drawEnemyHPBar(ctx, e); });
     
     // Desenhar barra de HP do Boss (fase 5)
     if (lvl.type === 'boss') {
@@ -1976,6 +2059,7 @@ function loop() {
     updateEscapeLevel(); // Lógica especial da fase A Fuga
     updateEscapeRouteLevel(); // Lógica especial da fase Rota de Fuga
     checkCollisions();
+    drawCrosshair(ctx);
     updateUI();
     
     if (player.hp <= 0) {
@@ -2220,6 +2304,12 @@ async function loadSavedProgress() {
     powerupTimer = 0;
     nextPowerupSpawn = 200;
     
+    // Fase bônus só antes da fase 4; se o save está além, marcar como jogada
+    if (typeof bonusStagePlayed !== 'undefined') {
+        bonusStagePlayed = levelIndex >= BONUS_STAGE.afterLevelIndex;
+        lastBonusResult = null;
+    }
+    
     generateIcons();
     
     // Start the saved level with transition
@@ -2256,6 +2346,7 @@ async function loadSavedProgress() {
 function quitToMenu() {
     gameState = 'MENU';
     AudioEngine.stopMusic();
+    canvas.style.cursor = 'default';
     
     // DESCARTE: Ao sair no meio da fase, descartar pontuação em andamento
     phaseScore = 0;
