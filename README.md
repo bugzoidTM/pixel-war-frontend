@@ -370,4 +370,11 @@ Este projeto é de código aberto para fins educacionais.
 
 Desenvolvido com ❤️ usando JavaScript vanilla, HTML5 Canvas e Node.js.
 
+**Assets:** o cenário (chão tileado, árvores, barricadas, sucata) usa tiles dos packs
+[Tiny Battle](https://kenney.nl/assets/tiny-battle), [Tiny Town](https://kenney.nl/assets/tiny-town)
+e [Pixel Shmup](https://kenney.nl/assets/pixel-shmup) do **Kenney** (licença CC0),
+recortados num único atlas de ~2.7KB em `assets/kenney-atlas.png`. Detalhes em
+[`assets/CREDITS.md`](assets/CREDITS.md). Os sprites de personagens, veículos e
+efeitos continuam sendo pixel art procedural do próprio jogo.
+
 **Bom jogo, soldado! 🎖️**

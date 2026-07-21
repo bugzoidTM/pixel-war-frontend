@@ -164,24 +164,29 @@ function generateDecorations() {
         return;
     }
     
+    // Decoração só vai para o "chão" (abaixo da linha do horizonte do parallax);
+    // antes sorteava a tela inteira e árvores/caixas apareciam boiando no céu.
+    const groundTop = canvas.height * 0.58;
+    const groundY = () => groundTop + Math.random() * (canvas.height - groundTop - 20);
+
     if (lvl.bg !== '#1a5276' && lvl.bg !== '#1a1a1a') {
         for (let i = 0; i < 8; i++) {
-            decorations.push(new Decoration(Math.random() * canvas.width, Math.random() * canvas.height, 'tree'));
+            decorations.push(new Decoration(Math.random() * canvas.width, groundY(), 'tree'));
         }
     }
-    
+
     if (lvl.type !== 'kill_static') {
         for (let i = 0; i < 12; i++) {
-            decorations.push(new Decoration(Math.random() * canvas.width, Math.random() * canvas.height, Math.random() > 0.5 ? 'crate' : 'rock'));
+            decorations.push(new Decoration(Math.random() * canvas.width, groundY(), Math.random() > 0.5 ? 'crate' : 'rock'));
         }
     } else {
         for (let i = 0; i < 8; i++) {
-            decorations.push(new Decoration(Math.random() * canvas.width, Math.random() * canvas.height, 'rock'));
+            decorations.push(new Decoration(Math.random() * canvas.width, groundY(), 'rock'));
         }
     }
-    
+
     for (let i = 0; i < 5; i++) {
-        decorations.push(new Decoration(Math.random() * canvas.width, Math.random() * canvas.height, 'crater'));
+        decorations.push(new Decoration(Math.random() * canvas.width, groundY(), 'crater'));
     }
 }
 
@@ -348,16 +353,27 @@ function drawParallaxBackground(theme = 'default', groundColor = null) {
     // CAMADA 2.5: Chão - cobre do horizonte até a base da tela
     // (sem isso a área entre o céu e o rodapé fica preta)
     if (groundColor) {
-        drawParallaxGround(groundColor);
+        drawParallaxGround(groundColor, theme);
     }
 
     // CAMADA 3: Frente (desenhada sobre o chão)
     drawParallaxForeground(config.foreground);
 }
 
-function drawParallaxGround(groundColor) {
+function drawParallaxGround(groundColor, theme) {
     const horizonY = Math.floor(canvas.height * 0.55);
 
+    // Chão tileado com o atlas Kenney (pré-renderizado, 1 drawImage por frame).
+    if (typeof KenneyTiles !== 'undefined' &&
+        KenneyTiles.drawGround(ctx, theme, groundColor, 0, horizonY,
+                               canvas.width, canvas.height - horizonY)) {
+        // Linha de horizonte sutil (transição céu/chão)
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.08)';
+        ctx.fillRect(0, horizonY, canvas.width, 2);
+        return;
+    }
+
+    // --- Fallback procedural (atlas ainda carregando ou indisponível) ---
     const gradient = ctx.createLinearGradient(0, horizonY, 0, canvas.height);
     gradient.addColorStop(0, adjustColor(groundColor, 22));
     gradient.addColorStop(0.55, groundColor);
@@ -580,10 +596,45 @@ function drawParallaxRuins(offset, baseY, color, count) {
     }
 }
 
+// Tiles Kenney usados na camada da frente, por tipo de cenário
+const PARALLAX_FG_TILES = {
+    vegetation: ['bush', 'tree_round', 'bush'],
+    trees: ['tree_pine', 'tree_round', 'trees_double'],
+    rubble: ['rock', 'truck', 'crate'],
+    rocks: ['rock', 'rock', 'barrel'],
+    barricades: ['barricade_x', 'wire', 'fence']
+};
+
+// Fileira de props da camada da frente com sprites Kenney.
+// Sem alocação e sem Math.random: posição/variante derivadas do índice.
+function drawParallaxKenneyProps(offset, baseY, tiles, count) {
+    const scale = 3;
+    const size = KenneyTiles.TILE * scale;
+    const spacing = canvas.width / count + 40;
+    const period = spacing * (count + 2);
+
+    for (let i = 0; i < count + 3; i++) {
+        let x = (i * spacing - offset) % period;
+        if (x < 0) x += period;
+        x -= spacing;
+
+        const tile = tiles[i % tiles.length];
+        ctx.fillStyle = 'rgba(0,0,0,0.25)';
+        ctx.fillRect(x + size * 0.2, baseY + size * 0.2, size * 0.6, 5);
+        KenneyTiles.draw(ctx, tile, x, baseY - size * 0.75, scale);
+    }
+}
+
 function drawParallaxForeground(fgConfig) {
     const scrollOffset = parallaxScrollX * PARALLAX_CONFIG.foregroundSpeed;
     const baseY = canvas.height - 60;
-    
+
+    const kenneyTiles = PARALLAX_FG_TILES[fgConfig.type];
+    if (kenneyTiles && typeof KenneyTiles !== 'undefined' && KenneyTiles.has(kenneyTiles[0])) {
+        drawParallaxKenneyProps(scrollOffset, baseY, kenneyTiles, fgConfig.count);
+        return;
+    }
+
     switch (fgConfig.type) {
         case 'vegetation':
             drawParallaxVegetation(scrollOffset, baseY, fgConfig.color, fgConfig.count);

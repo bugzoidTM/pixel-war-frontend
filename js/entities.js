@@ -1073,16 +1073,52 @@ class Decoration {
         this.type = type;
         this.sway = Math.random() * Math.PI * 2;
         this.frame = Math.floor(Math.random() * 4); // Para animação discreta
+        // Variante do tile Kenney (sorteada uma vez, não por frame)
+        this.variant = Math.floor(Math.random() * 3);
+        // Tema do cenário no momento em que a fase foi montada
+        this.theme = typeof getParallaxTheme === 'function' ? getParallaxTheme() : 'default';
     }
-    
+
+    // Tile do atlas Kenney correspondente a esta decoração (null = procedural)
+    kenneyTile() {
+        // Em zona de guerra / cidade não há mata: vira mato baixo e sucata
+        const wasteland = this.theme === 'war' || this.theme === 'urban' || this.theme === 'desert';
+        switch (this.type) {
+            case 'tree':   return wasteland
+                                ? ['bush', 'wire', 'barricade_x'][this.variant]
+                                : ['tree_pine', 'tree_round', 'trees_double'][this.variant];
+            case 'bush':   return 'bush';
+            case 'rock':   return ['rock', 'rock', 'truck'][this.variant];
+            case 'crate':  return ['crate', 'barricade_x', 'wire'][this.variant];
+            case 'barrel': return 'barrel';
+            default:       return null; // 'crater' segue procedural
+        }
+    }
+
     draw(ctx) {
         const px = Math.floor(this.x / PIXEL_SCALE);
         const py = Math.floor(this.y / PIXEL_SCALE);
-        
+
         // Animação de balanço em frames discretos (não seno)
         const swayFrame = Math.floor(frameCount / 20 + this.frame) % 4;
         const swayOffset = swayFrame === 1 ? 1 : swayFrame === 3 ? -1 : 0;
-        
+
+        // Sprites Kenney (CC0) quando o atlas está pronto; senão, pixel art procedural
+        const tile = typeof KenneyTiles !== 'undefined' ? this.kenneyTile() : null;
+        if (tile && KenneyTiles.has(tile)) {
+            const isTree = this.type === 'tree';
+            const scale = isTree ? 3 : 2; // escalas inteiras: pixel art continua nítida
+            const size = KenneyTiles.TILE * scale;
+            // sombra no chão para "assentar" o objeto
+            ctx.fillStyle = 'rgba(0,0,0,0.22)';
+            ctx.fillRect(Math.round(this.x - size * 0.26), Math.round(this.y + size * 0.34),
+                         Math.round(size * 0.52), Math.max(3, Math.round(size * 0.1)));
+            KenneyTiles.draw(ctx, tile,
+                             this.x - size / 2 + (isTree ? swayOffset : 0),
+                             this.y - size / 2, scale);
+            return;
+        }
+
         switch(this.type) {
             case 'tree':
                 // Tronco pixelado
